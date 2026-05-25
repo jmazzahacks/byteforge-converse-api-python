@@ -90,17 +90,15 @@ class ConverseClient:
 
     # ---- chat turn ----------------------------------------------------
 
-    def chat(self, conversation_id: str, content: str) -> dict:
+    def chat(self, conversation_id: str, content: str) -> Message:
         """
-        Submit a user message and receive the assistant reply.
-
-        Returns the raw response dict for now; once the backend implements
-        the LLM turn, this should return a Message.
+        Submit a user message and receive the assistant reply as a Message.
         """
-        return self._post(
+        data = self._post(
             f"/api/conversations/{conversation_id}/chat",
             {"content": content},
         )
+        return Message.from_dict(data)
 
     # ---- internals ----------------------------------------------------
 
