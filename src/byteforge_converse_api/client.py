@@ -3,7 +3,7 @@ from typing import Optional
 
 import requests
 
-from byteforge_converse_models import Conversation, Message, Session
+from byteforge_converse_models import ChatTurn, Conversation, Message, Session
 
 logger = logging.getLogger(__name__)
 
@@ -90,15 +90,28 @@ class ConverseClient:
 
     # ---- chat turn ----------------------------------------------------
 
-    def chat(self, conversation_id: str, content: str) -> Message:
+    def chat(self, conversation_id: str, content: str) -> ChatTurn:
         """
-        Submit a user message and receive the assistant reply as a Message.
+        Submit a user message and receive a `ChatTurn`.
+
+        `turn.message` is always set (the persisted assistant message — its
+        `content` may be empty for a pure tool-call turn). `turn.tool_calls`
+        is the list of tools the model wants the caller to execute, or None
+        for a normal reply. Execute each tool and post the result back as a
+        `tool`-role message (with matching `tool_call_id`) before the next
+        `chat()` call.
+
+        Raises `ConverseAPIError` for both transport and protocol-shape
+        failures so callers only need one except clause.
         """
         data = self._post(
             f"/api/conversations/{conversation_id}/chat",
             {"content": content},
         )
-        return Message.from_dict(data)
+        try:
+            return ChatTurn.from_dict(data)
+        except ValueError as e:
+            raise ConverseAPIError(200, f"malformed ChatTurn response: {e}") from e
 
     # ---- internals ----------------------------------------------------
 

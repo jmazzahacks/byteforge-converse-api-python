@@ -32,8 +32,21 @@ with ConverseClient("https://converse.example.com") as client:
     for c in convos:
         print(c.id, c.title)
 
-    reply = client.chat(convos[0].id, content="Hello!")
-    print(reply)
+    turn = client.chat(convos[0].id, content="Hello!")
+
+    # `turn.message` is always set (the persisted assistant reply).
+    # `turn.tool_calls` is populated when the model asked you to invoke
+    # one or more tools — execute each, then post the result back as a
+    # `tool`-role message with matching `tool_call_id` before the next
+    # chat() call.
+    print(turn.message.content)
+    for call in (turn.tool_calls or []):
+        result = run_tool(call.name, call.arguments)
+        client.post_message(convos[0].id, {
+            "role": "tool",
+            "content": result,
+            "tool_call_id": call.id,
+        })
 ```
 
 Auth is delegated to the consuming app — pass auth headers via `extra_headers={...}` or set them on a `requests.Session` you bring yourself.
