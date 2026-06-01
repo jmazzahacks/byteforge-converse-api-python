@@ -113,6 +113,32 @@ class ConverseClient:
         except ValueError as e:
             raise ConverseAPIError(200, f"malformed ChatTurn response: {e}") from e
 
+    def chat_tool_result(
+        self,
+        conversation_id: str,
+        tool_call_id: str,
+        content: str,
+    ) -> ChatTurn:
+        """
+        Submit a tool result and immediately drive the next LLM turn.
+
+        Sugar over `post_message(role="tool", ...)` + `chat()`: persists a
+        `tool`-role message with the supplied `tool_call_id` and returns the
+        model's next ChatTurn in one round trip.
+
+        Use this after executing a tool the model requested in a previous
+        ChatTurn. The returned ChatTurn may itself contain more tool calls —
+        loop as needed until you get a plain assistant message.
+        """
+        data = self._post(
+            f"/api/conversations/{conversation_id}/chat/tool_result",
+            {"tool_call_id": tool_call_id, "content": content},
+        )
+        try:
+            return ChatTurn.from_dict(data)
+        except ValueError as e:
+            raise ConverseAPIError(200, f"malformed ChatTurn response: {e}") from e
+
     # ---- internals ----------------------------------------------------
 
     def _get(self, path: str, params: Optional[dict] = None) -> dict:
